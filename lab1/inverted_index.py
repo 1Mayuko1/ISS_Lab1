@@ -2,15 +2,6 @@ import re
 import os
 
 
-class Output:
-    def __init__(self, document, frequency):
-        self.path = document
-        self.frequency = frequency
-
-    def __repr__(self):
-        return str(self.__dict__)
-
-
 class Storage:
     def __init__(self):
         self.db = dict()
@@ -28,6 +19,17 @@ class Storage:
         return self.db.pop(document['id'], None)
 
 
+def get_files_list():
+    files_array = []
+
+    for file in os.listdir('data/'):
+        file_dir = os.path.dirname(os.path.realpath('__file__'))
+        file_name = os.path.join(file_dir, 'data/{file}'.format(file=file))
+        files_array.append(file_name)
+
+    return files_array
+
+
 class InvertedIndex:
     def __init__(self, db):
         self.index = dict()
@@ -41,16 +43,8 @@ class InvertedIndex:
         terms = clean_text.replace('\n', ' ').split(' ')
         appearances_dict = dict()
 
-        files_array = []
-
-        for file in os.listdir('data/'):
-            file_dir = os.path.dirname(os.path.realpath('__file__'))
-            file_name = os.path.join(file_dir, 'data/{file}'.format(file=file))
-            files_array.append(file_name)
-
         for term in terms:
-            term_frequency = appearances_dict[term].frequency if term in appearances_dict else 0
-            appearances_dict[term] = Output(files_array[int(document['id']) - 1], term_frequency + 1)
+            appearances_dict[term] = get_files_list()[int(document['id']) - 1]
 
         # Update index
         update_dict = {
@@ -68,7 +62,10 @@ class InvertedIndex:
         return document
 
     def lookup_query(self, query):
-        return {term: self.index[term] for term in query.split(' ') if term in self.index}
+        res = {term: self.index[term] for term in query.split(' ') if term in self.index}
+        if not bool(res):
+            return "\033[1;32;40m {term} not found \033[0;0m".format(term=query)
+        return res
 
 
 def index_file(index):
@@ -91,11 +88,7 @@ def main():
     index_file(index)
 
     search_term = input("Enter term(s) to search: ")
-    result = index.lookup_query(search_term)
-    if not bool(result):
-        return print("\033[1;32;40m No text found \033[0;0m")
-    else:
-        print(result)
+    print(index.lookup_query(search_term))
 
 
 main()

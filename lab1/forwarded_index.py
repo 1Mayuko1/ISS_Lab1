@@ -2,15 +2,6 @@ import re
 import os
 
 
-class Output:
-    def __init__(self, document, frequency):
-        self.path = document
-        self.frequency = frequency
-
-    def __repr__(self):
-        return str(self.__dict__)
-
-
 class Storage:
     def __init__(self):
         self.db = dict()
@@ -28,6 +19,17 @@ class Storage:
         return self.db.pop(document['id'], None)
 
 
+def get_files_list():
+    files_array = []
+
+    for file in os.listdir('data/'):
+        file_dir = os.path.dirname(os.path.realpath('__file__'))
+        file_name = os.path.join(file_dir, 'data/{file}'.format(file=file))
+        files_array.append(file_name)
+
+    return files_array
+
+
 class InvertedIndex:
     def __init__(self, db):
         self.index = dict()
@@ -39,33 +41,41 @@ class InvertedIndex:
     def index_document(self, document):
         clean_text = re.sub(r'[^\w\s]', '', document['text']).lower()
         terms = clean_text.replace('\n', ' ').split(' ')
+        appearances_dict = dict()
 
-        files_array = []
-        for file in os.listdir('data/'):
-            file_dir = os.path.dirname(os.path.realpath('__file__'))
-            file_name = os.path.join(file_dir, 'data/{file}'.format(file=file))
-            files_array.append(file_name)
+        docs = []
+        for term in terms:
+            if term not in docs:
+                docs.append(term)
+        appearances_dict[get_files_list()[int(document['id']) - 1]] = docs
 
-        result_dict = {}
+        update_dict = {
+            key: appearance
+            if key not in self.index
+            else self.index[key] + appearance
+            for (key, appearance) in appearances_dict.items()
+        }
 
-        for file in files_array:
-            docs = []
-            for term in terms:
-                if term not in docs:
-                    docs.append(term)
-                result_dict[file] = docs
-
-        self.index.update(result_dict)
+        self.index.update(update_dict)
+        # print(update_dict)  # TODO (todo for highlight msg) index all words
         self.db.add(document)
         return document
 
-    def return_data(self):
-        return self.index
+    def lookup_query(self, query):
+        res = []
+        for term in self.index:
+            for words in self.index[term]:
+                if query in words:
+                    if term not in res:
+                        res.append(term)
+
+        if len(res) >= 1:
+            return {query: res}
+        else:
+            return "\033[1;32;40m {term} not found \033[0;0m".format(term=query)
 
 
-def main():
-    db = Storage()
-    index = InvertedIndex(db)
+def index_file(index):
     inc = 1
     for x in os.listdir('data/'):
         file_dir = os.path.dirname(os.path.realpath('__file__'))
@@ -78,8 +88,14 @@ def main():
         index.index_document(doc)
         inc += 1
 
-    print('')
-    print('Indexed successful: ' + str(index.return_data()))
+
+def main():
+    db = Storage()
+    index = InvertedIndex(db)
+    index_file(index)
+
+    search_term = input("Enter term(s) to search: ")
+    print(index.lookup_query(search_term))
 
 
 main()

@@ -30,7 +30,7 @@ def get_files_list():
     return files_array
 
 
-class InvertedIndex:
+class ForwardIndex:
     def __init__(self, db):
         self.index = dict()
         self.db = db
@@ -57,20 +57,21 @@ class InvertedIndex:
         }
 
         self.index.update(update_dict)
-        # print(update_dict)  # TODO (todo for highlight msg) index all words
+        # print(update_dict)  # TODO (todo for highlight msg) index words
         self.db.add(document)
         return document
 
     def lookup_query(self, query):
+        clean_text = re.sub(r'[^\w\s]', '', query).lower().strip()
         res = []
         for term in self.index:
             for words in self.index[term]:
-                if query in words:
+                if clean_text in words:
                     if term not in res:
                         res.append(term)
 
         if len(res) >= 1:
-            return {query: res}
+            return {clean_text: res}
         else:
             return "\033[1;32;40m {term} not found \033[0;0m".format(term=query)
 
@@ -91,11 +92,11 @@ def index_file(index):
 
 def main():
     db = Storage()
-    index = InvertedIndex(db)
+    index = ForwardIndex(db)
     index_file(index)
 
     search_term = input("Enter term(s) to search: ")
-    print(index.lookup_query(search_term))
+    print(index.lookup_query(search_term.strip()))
 
 
-main()
+# main()

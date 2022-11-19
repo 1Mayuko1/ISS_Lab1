@@ -55,14 +55,15 @@ class InvertedIndex:
         }
 
         self.index.update(update_dict)
-        # print(update_dict)  # TODO (todo for highlight msg) index all words
+        # print(update_dict)  # TODO (todo for highlight msg) index words
 
         # Add into the database
         self.db.add(document)
         return document
 
     def lookup_query(self, query):
-        res = {term: self.index[term] for term in query.split(' ') if term in self.index}
+        clean_text = re.sub(r'[^\w\s]', '', query).lower().strip()
+        res = {term: self.index[term] for term in clean_text.split(' ') if term in self.index}
         if not bool(res):
             return "\033[1;32;40m {term} not found \033[0;0m".format(term=query)
         return res
@@ -91,4 +92,4 @@ def main():
     print(index.lookup_query(search_term))
 
 
-main()
+# main()
